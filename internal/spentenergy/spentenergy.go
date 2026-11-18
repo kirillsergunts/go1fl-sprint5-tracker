@@ -1,6 +1,9 @@
+// Пакет spentenergy содержит формулы для расчёта дистанции,
+// средней скорости и потраченных калорий.
 package spentenergy
 
 import (
+	"errors"
 	"time"
 )
 
@@ -12,18 +15,74 @@ const (
 	walkingCaloriesCoefficient = 0.5  // коэффициент для расчета калорий при ходьбе.
 )
 
+// Ошибки, которые возвращают функции расчёта калорий.
+// Объявлены как переменные пакета, чтобы вызывающий код мог
+// сравнить с ними результат через errors.Is.
+var (
+	ErrInvalidSteps    = errors.New("количество шагов должно быть больше нуля")
+	ErrInvalidWeight   = errors.New("вес должен быть больше нуля")
+	ErrInvalidHeight   = errors.New("рост должен быть больше нуля")
+	ErrInvalidDuration = errors.New("продолжительность должна быть больше нуля")
+)
+
+// validate проверяет входные параметры для расчёта калорий.
+// Функция начинается с маленькой буквы, поэтому видна только внутри пакета.
+func validate(steps int, weight, height float64, duration time.Duration) error {
+	if steps <= 0 {
+		return ErrInvalidSteps
+	}
+	if weight <= 0 {
+		return ErrInvalidWeight
+	}
+	if height <= 0 {
+		return ErrInvalidHeight
+	}
+	if duration <= 0 {
+		return ErrInvalidDuration
+	}
+	return nil
+}
+
+// WalkingSpentCalories возвращает количество калорий, потраченных при ходьбе.
 func WalkingSpentCalories(steps int, weight, height float64, duration time.Duration) (float64, error) {
-	// TODO: реализовать функцию
+	if err := validate(steps, weight, height, duration); err != nil {
+		return 0, err
+	}
+
+	meanSpeed := MeanSpeed(steps, height, duration)
+	durationInMinutes := duration.Minutes()
+	calories := (weight * meanSpeed * durationInMinutes) / minInH
+
+	return calories * walkingCaloriesCoefficient, nil
 }
 
+// RunningSpentCalories возвращает количество калорий, потраченных при беге.
 func RunningSpentCalories(steps int, weight, height float64, duration time.Duration) (float64, error) {
-	// TODO: реализовать функцию
+	if err := validate(steps, weight, height, duration); err != nil {
+		return 0, err
+	}
+
+	meanSpeed := MeanSpeed(steps, height, duration)
+	durationInMinutes := duration.Minutes()
+
+	return (weight * meanSpeed * durationInMinutes) / minInH, nil
 }
 
+// MeanSpeed возвращает среднюю скорость в км/ч.
+// Если шагов или продолжительности нет (0 или меньше), возвращает 0.
 func MeanSpeed(steps int, height float64, duration time.Duration) float64 {
-	// TODO: реализовать функцию
+	if steps <= 0 || duration <= 0 {
+		return 0
+	}
+
+	distance := Distance(steps, height)
+
+	return distance / duration.Hours()
 }
 
+// Distance возвращает пройденную дистанцию в километрах.
 func Distance(steps int, height float64) float64 {
-	// TODO: реализовать функцию
+	stepLength := height * stepLengthCoefficient
+
+	return float64(steps) * stepLength / mInKm
 }
